@@ -50,15 +50,15 @@ Setup (see pics):
 7.	Logs can be found in C:\ProgramData\AADx509Sync.log
 
 Security implications:
+
 A user that knows an AAD Device ID or a user's UPN and has permission to enroll certificates from your CAs and specify SANs (subject alternative names) could obtain a certificate to access resources via NPS as that AAD device. Please ensure your certificate templates in ADCS are secured/locked down and you only have certificate templates available that are required. We're technically still mapping certificate's SAN to AD object's SPN/UPN, but validating the certificates came from authorized CAs in our domain, then mapping to AD objects.
 
 Notes:
+
 Before disabling SAN to UPN mapping, please fully read KB5014754 to understand the implications of why step 2 is required and impacts your environment may see in the coming months. According to the KB, you technically shouldn't have to disable the mapping, but I had to in order to get it working in my environment. As long as all of your ADCS servers have the May 2022 update and all required certificates have been re-enrolled with OID 1.3.6.1.4.1.311.25.2, your environment should not see an impact with disabling SAN to UPN on your DCs.
+
 The script may take shorter or longer to run depending on the resources of the system running it, and where you run it (on DCs, CAs, laptop, etc). Since the majority of the queries the script is doing is against AD, it is best to run this directly on your DCs. Check the log file after first run to ensure everything is working properly. I'm running this on our DCs that are Server 2019 with PS version 5.1 (ADCS is also 2019) so I'm sure 2016 and 2022 will work, but unsure about 2012R2 or earlier PS versions.
+
 You don't technically need to issue the certs via Intune, but Setup 1.1 or 1.2 must be true, and I don't know of another way to deploy cert profiles that reference the AAD device ID. If there is interest, I could re-write a v2 that fixes some of the limitations, removes reliance on AAD Connect, and syncs cloud-only users, but regardless, an ADDS instance is required to run NPS and ADCS.
 Happy NPSing :-)
-
-
-EDIT 11/23/22 - I realized bad logic in how the script matches existing devices could cause computer objects to be infinitely created between AD and AAD if the DeviceOU variable is set to sync in Azure AD Connect. This would escalate exponentially quickly (1000 devices turns into 2000, turns into 4000, 8000, 16000, etc each sync...) so I have pulled the script from GitHub for now until I'm able to solve this issue. I am leaving the post up for the info and will edit again once I'm able to update the script.
-EDIT 11/30/22 - Added check to make sure 'feedback loop' is not happening with AAD Connect, added max lines variable for log file, and some other small tweaks. Also updated info above.
 
