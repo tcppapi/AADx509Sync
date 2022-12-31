@@ -289,17 +289,22 @@ foreach($group in $WBGroups){
     Write-Log -Severity "Info" -Message "<GROUP> Syncing writeback group '$($group.Name)'"
     $group.Name -Match "^(.*)(_[0-9a-fA-F]{12})$" | Out-Null
     $AADx509GrpName = "$($matches[1])_AADx509Sync"
+    # All printable characters are allowed in sAMAccountName values except the following:
+    #        " [ ] : ; | = + * ? < > / \ ,
+    $AADx509GrpSam = $AADx509GrpName.Replace("`"", "").Replace("[", "").Replace("]", "").Replace(":", "").Replace(";", "")
+    $AADx509GrpSam = $AADx509GrpSam.Replace("|", "").Replace("=", "").Replace("+", "").Replace("*", "").Replace("?", "")
+    $AADx509GrpSam = $AADx509GrpSam.Replace("<", "").Replace(">", "").Replace("/", "").Replace("\", "").Replace(",", "")
     if(!($AADx509Groups |? Name -like $AADx509GrpName)){
         Write-Log -Severity "Info" -Message "<GROUP> Creating AADx509Group '$AADx509GrpName' for syncing '$($group.Name)'"
         try{
-            New-ADGroup -Path $GroupOU -Name $AADx509GrpName -Description $group.Description -GroupCategory Security -GroupScope Global 
+            New-ADGroup -Path $GroupOU -Name $AADx509GrpName -Description $group.Description -GroupCategory Security -GroupScope Global -SamAccountName $AADx509GrpSam
         }
         catch{  Write-Log -Severity "Error" -Message "$($_.Exception.Message)" 
                 Write-Log -Severity "Error" -Message "<GROUP> Error creating group $AADx509GrpName, skipping group..." 
                 return
         }
     }
-    $SyncGroup = Get-ADGroup -Identity $AADx509GrpName
+    $SyncGroup = Get-ADGroup -Identity $AADx509GrpSam
     $WBGrpMembers = $ADObjects |? MemberOf -Like $group.DistinguishedName
     $SyncGrpMembers = $ADObjects |? MemberOf -Like $SyncGroup.DistinguishedName
     foreach($ADObject in $WBGrpMembers){
